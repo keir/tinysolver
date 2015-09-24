@@ -1,4 +1,4 @@
-NOTE! This is not production just yet so I don't advise using it!
+NOTE! This is not fully working just yet so I don't advise using it!
 
 # Tiny Solver
 A tiny least squares solver targeting extreme performance on repeated
