@@ -41,6 +41,12 @@
 
 namespace tinysolver {
 
+// The solver supports either statically or dynamically sized cost
+// functions. If the number of parameters is dynamic then the Function
+// must define:
+//   int NumParameters() const;
+// If the number of residuals is dynamic then the Function must define:
+//   int NumResiduals() const;
 template<typename Function,
          typename LinearSolver = Eigen::PartialPivLU<
            Eigen::Matrix<typename Function::Scalar,
@@ -110,6 +116,8 @@ class TinySolver {
   }
 
   Results solve(const Function& function, Parameters* x_and_min) {
+    Initialize<NUM_PARAMETERS, NUM_RESIDUALS>(function);
+
     Parameters& x = *x_and_min;
     results.status = Update(function, x);
 
@@ -175,9 +183,51 @@ class TinySolver {
   Eigen::Matrix<Scalar, NUM_RESIDUALS, 1> error_, f_x_new_;
   Eigen::Matrix<Scalar, NUM_RESIDUALS, NUM_PARAMETERS> jacobian_;
   Eigen::Matrix<Scalar, NUM_PARAMETERS, NUM_PARAMETERS> jtj_, jtj_augmented_;
+
+  // The following definitions are needed for template metaprogramming.
+  template<bool Condition, typename T> struct enable_if;
+
+  template<typename T> struct enable_if<true, T> {
+    typedef T type;
+  };
+
+  // The number of parameters and residuals are dynamically sized.
+  template <int N, int M>
+  typename enable_if<(N == Eigen::Dynamic && M == Eigen::Dynamic), void>::type
+  Initialize(const Function& function) {
+    Initialize(function.NumParameters(), function.NumResiduals());
+  }
+
+  // The number of parameters is dynamically sized and the number of
+  // residuals is statically sized.
+  template <int N, int M>
+  typename enable_if<(N == Eigen::Dynamic && M != Eigen::Dynamic), void>::type
+  Initialize(const Function& function) {
+    Initialize(function.NumParameters(), M);
+  }
+
+  // The number of parameters is statically sized and the number of
+  // residuals is dynamically sized.
+  template <int N, int M>
+  typename enable_if<(N != Eigen::Dynamic && M == Eigen::Dynamic), void>::type
+  Initialize(const Function& function) {
+    Initialize(N, function.NumResiduals());
+  }
+
+  // The number of parameters and residuals are staticallysized.
+  template <int N, int M>
+  typename enable_if<(N != Eigen::Dynamic && M != Eigen::Dynamic), void>::type
+  Initialize(const Function& /* function */) { }
+
+  void Initialize(int num_parameters, int num_residuals) {
+    error_.resize(num_residuals);
+    f_x_new_.resize(num_residuals);
+    jacobian_.resize(num_residuals, num_parameters);
+    jtj_.resize(num_parameters, num_parameters);
+    jtj_augmented_.resize(num_parameters, num_parameters);
+  }
 };
 
 }  // namespace tinysolver
 
 #endif  // TINY_SOLVER_H_
- 
