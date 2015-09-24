@@ -29,7 +29,7 @@
 
 namespace tinysolver {
 
-typedef Eigen::Matrix<double, 3, 1> Vec2;
+typedef Eigen::Matrix<double, 2, 1> Vec2;
 typedef Eigen::Matrix<double, 3, 1> Vec3;
 
 class F {
