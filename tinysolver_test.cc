@@ -29,8 +29,8 @@
 
 namespace tinysolver {
 
+typedef Eigen::Matrix<double, 2, 1> Vec2;
 typedef Eigen::Matrix<double, 3, 1> Vec3;
-typedef Eigen::Matrix<double, 4, 1> Vec4;
 
 class F {
  public:
@@ -38,7 +38,7 @@ class F {
   enum {
     // Can also be Eigen::Dynamic.
     NUM_PARAMETERS = 3,
-    NUM_RESIDUALS = 4,
+    NUM_RESIDUALS = 2,
   };
   bool operator()(const double* parameters,
                   double* residuals,
@@ -51,12 +51,14 @@ class F {
     residuals[1] = y * z;
 
     if (jacobian) {
-      jacobian[0 * 3 + 0] = 1;
-      jacobian[0 * 3 + 1] = 2;
-      jacobian[0 * 3 + 2] = 4;
-      jacobian[1 * 3 + 0] = 0;
-      jacobian[1 * 3 + 1] = 1;
-      jacobian[1 * 3 + 2] = 1;
+      jacobian[0 * 2 + 0] = 1;
+      jacobian[0 * 2 + 1] = 0;
+
+      jacobian[1 * 2 + 0] = 2;
+      jacobian[1 * 2 + 1] = z;
+
+      jacobian[2 * 2 + 0] = 4;
+      jacobian[2 * 2 + 1] = y;
     }
     return true;
   }
@@ -65,12 +67,16 @@ class F {
 TEST(TinySolver, SimpleExample) {
   Vec3 x(0.76026643, -30.01799744, 0.55192142);
   F f;
+
+  Vec2 residuals;
+  f(x.data(), residuals.data(), NULL);
+  EXPECT_GT(residuals.norm(), 1e-10);
+
   TinySolver<F> solver;
   solver.solve(f, &x);
-  Vec3 expected_min_x(2, 5, 0);
-  EXPECT_NEAR(expected_min_x(0), x(0), 1e-5);
-  EXPECT_NEAR(expected_min_x(1), x(1), 1e-5);
-  EXPECT_NEAR(expected_min_x(2), x(2), 1e-5);
+
+  f(x.data(), residuals.data(), NULL);
+  EXPECT_NEAR(0.0, residuals.norm(), 1e-10);
 }
 
 }  // namespace tinysolver
